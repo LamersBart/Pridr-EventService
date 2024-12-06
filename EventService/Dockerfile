@@ -6,16 +6,16 @@ EXPOSE 8081
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
-WORKDIR /src
-COPY ["EventService/EventService.csproj", "EventService/"]
-RUN dotnet restore "EventService/EventService.csproj"
-COPY . .
-WORKDIR "/src/EventService"
-RUN dotnet build "EventService.csproj" -c $BUILD_CONFIGURATION -o /app/build
+WORKDIR /App
+COPY *.csproj ./
+RUN dotnet restore
+COPY . ./
+RUN dotnet build -c $BUILD_CONFIGURATION
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "EventService.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish EventService.csproj -c $BUILD_CONFIGURATION -o /app/publish
+#dotnet publish "EventService.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app
