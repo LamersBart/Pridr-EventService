@@ -1,0 +1,48 @@
+name: Build and Publish image to Docker hub
+
+on:
+  [workflow_dispatch]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-22.04
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set dynamic TAG variable
+        id: set_tag
+        run: echo "TAG=$(date +%s)" >> $GITHUB_ENV
+
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Create appsettings.Production.json
+        run: |
+          mkdir -p ./EventService
+          printf '{
+            "ConnectionStrings": {
+              "PostgresConnection": "Host=${{ secrets.APPSETTINGS_PRODUCTION_CONNECTIONSTRING_HOST }};Port=${{ secrets.APPSETTINGS_PRODUCTION_CONNECTIONSTRING_PORT }};Username=${{ secrets.APPSETTINGS_PRODUCTION_CONNECTIONSTRING_USERNAME }};Password=${{ secrets.APPSETTINGS_PRODUCTION_CONNECTIONSTRING_PASSWORD }};Database=${{ secrets.APPSETTINGS_PRODUCTION_CONNECTIONSTRING_DB }}"
+            },
+            "RabbitMQHost": "'"${{ secrets.APPSETTINGS_PRODUCTION_RABBITMQHOST }}"'",
+            "RabbitMQPort": "'"${{ secrets.APPSETTINGS_PRODUCTION_RABBITMQPORT }}"'",
+            "Keycloak": {
+              "AuthorizationUrl": "'"${{ secrets.APPSETTINGS_PRODUCTION_KEYCLAOK_AUTHURL }}"'"
+            },
+            "Authentication": {
+              "MetadataAddress": "'"${{ secrets.APPSETTINGS_PRODUCTION_AUTH_METADATA }}"'",
+              "ValidIssuer": "'"${{ secrets.APPSETTINGS_PRODUCTION_AUTH_VALIDISSUER }}"'",
+              "Audience": "'"${{ secrets.APPSETTINGS_PRODUCTION_AUTH_AUDIENCE }}"'"
+            }
+          }' > ./EventService/appsettings.Production.json
+
+      - name: Verify appsettings.production.json
+        run: cat ./EventService/appsettings.Production.json
+
+      - name: Build the Docker image
+        run: docker build ./EventService --file ./EventService/Dockerfile -t lamersbart/pridr-eventservice:$TAG
+
+      - name: push image to hub
+        run: docker push lamersbart/pridr-eventservice:$TAG
