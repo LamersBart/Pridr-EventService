@@ -10,9 +10,9 @@ public class MessageBusSubscriber : BackgroundService
 {
     private readonly IConfiguration _configuration;
     private readonly IEventProcessor _eventProcessor;
-    private IConnection _connection;
-    private IModel _channel;
-    private string _queueName;
+    private IConnection? _connection;
+    private IModel? _channel;
+    private string? _queueName;
 
     public MessageBusSubscriber(IConfiguration configuration, IEventProcessor eventProcessor)
     {
@@ -26,7 +26,7 @@ public class MessageBusSubscriber : BackgroundService
         var factory = new ConnectionFactory()
         {
             HostName = _configuration["RabbitMQHost"],
-            Port = int.Parse(_configuration["RabbitMQPort"]),
+            Port = int.Parse(_configuration["RabbitMQPort"]!),
             ClientProvidedName = "UserEventService",
         };
         _connection = factory.CreateConnection();
@@ -37,7 +37,7 @@ public class MessageBusSubscriber : BackgroundService
             exchange: "amq.topic",
             routingKey: "KK.EVENT.CLIENT.pridr.SUCCESS.#.LOGIN");
         Console.WriteLine("--> Listening on the Message Bus. Waiting for messages...");
-        _connection.ConnectionShutdown += RabbitMQ_ConectionShutdown;
+        _connection.ConnectionShutdown += RabbitMQ_ConectionShutdown!;
     }
     
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -61,10 +61,10 @@ public class MessageBusSubscriber : BackgroundService
 
     public override void Dispose()
     {
-        if (_channel.IsOpen)
+        if (_channel!.IsOpen)
         {
             _channel.Close();
-            _connection.Close();
+            _connection!.Close();
         }
         base.Dispose();
     }

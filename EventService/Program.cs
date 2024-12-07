@@ -7,6 +7,22 @@ using EventService.Data;
 using EventService.EventProcessing;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(o =>
+    {
+        o.RequireHttpsMetadata = false;
+        o.Audience = builder.Configuration["Authentication:Audience"];
+        o.MetadataAddress = builder.Configuration["Authentication:MetadataAddress"]!;
+        o.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidIssuer = builder.Configuration["Authentication:ValidIssuer"],
+        };
+    });
+
+builder.Services.AddAuthorization();
+
 var environment = builder.Environment;
 var  corsConfig = "_corsConfig";
 builder.Services.AddCors(o =>
@@ -38,63 +54,47 @@ var info = new OpenApiInfo
     Contact = contact,
     License = license
 };
-var securityScheme = new OpenApiSecurityScheme
-{
-    Type = SecuritySchemeType.OAuth2,
-    Flows = new OpenApiOAuthFlows
-    {
-        Implicit = new OpenApiOAuthFlow
-        {
-            AuthorizationUrl = new Uri(builder.Configuration["Keyclaok:AuthURL"]!),
-            // Scopes = new Dictionary<string, string>
-            // {
-            //     {"openid", "openid"},
-            //     {"profile", "profile"}
-            // }
-        }
-    }
-};
-var securityReq = new OpenApiSecurityRequirement
-{
-    {
-        new OpenApiSecurityScheme
-        {
-            Reference = new OpenApiReference
-            {
-                Type = ReferenceType.SecurityScheme,
-                Id = "Keycloak"
-            },
-            In = ParameterLocation.Header,
-            Name = "Bearer",
-            Scheme = "Bearer",
-        },
-        []
-    }
-};
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(o =>
 {
-    o.SwaggerDoc("v1", info);
-    o.AddSecurityDefinition("Keycloak", securityScheme);
-    o.AddSecurityRequirement(securityReq);
-});
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(x =>
+    o.CustomSchemaIds(id => id.FullName!.Replace("+", "-"));
+    o.AddSecurityDefinition("Keycloak", new OpenApiSecurityScheme
     {
-        x.RequireHttpsMetadata = false;
-        x.Audience = builder.Configuration["Authentication:Audience"];
-        x.MetadataAddress = builder.Configuration["Authentication:MetaDataAddress"]!;
-        x.TokenValidationParameters = new TokenValidationParameters
+        Type = SecuritySchemeType.OAuth2,
+        Flows = new OpenApiOAuthFlows
         {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Authentication:Issuer"],
-            ValidAudience = builder.Configuration["Authentication:Audience"]
-        };
+            Implicit = new OpenApiOAuthFlow
+            {
+                AuthorizationUrl = new Uri(builder.Configuration["Keycloak:AuthorizationUrl"]!),
+                Scopes = new Dictionary<string, string>
+                {
+                    {"openid", "openid"},
+                    {"profile", "profile"}
+                }
+            }
+        }
     });
-builder.Services.AddAuthorization();
+    var securityRequirement = new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Id = "Keycloak",
+                    Type = ReferenceType.SecurityScheme
+                },
+                In = ParameterLocation.Header,
+                Name = "Bearer",
+                Scheme = "Bearer",
+            },
+            []
+        }
+    };
+    o.SwaggerDoc("v1", info);
+    o.AddSecurityRequirement(securityRequirement);
+});
+
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
     Console.WriteLine("Using in Postgres DB");
@@ -103,17 +103,17 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 builder.Services.AddScoped<IUserEventRepo, UserEventRepo>();
 builder.Services.AddSingleton<IEventProcessor, EventProcessor>();
-builder.Services.AddControllers();
 builder.Services.AddHostedService<MessageBusSubscriber>();
+builder.Services.AddControllers();
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+// if (app.Environment.IsDevelopment())
+// {
+app.UseSwagger();
+app.UseSwaggerUI(o => o.EnableTryItOutByDefault());
+// }
 prepDb.PrepPopulation(app, environment.IsProduction());
 // app.UseHttpsRedirection();
 app.UseCors(corsConfig);

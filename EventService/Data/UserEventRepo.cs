@@ -24,7 +24,7 @@ public class UserEventRepo : IUserEventRepo
 
     public UserEvent GetUserEventById(int id)
     {
-        return _context.UserEvents.FirstOrDefault(p => p.Id == id);
+        return _context.UserEvents.FirstOrDefault(p => p.Id == id)!;
     }
 
     public void CreateUserEvent(UserEvent userEvent)
