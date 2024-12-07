@@ -1,0 +1,103 @@
+name: Main Flow
+on:
+  [workflow_dispatch]
+jobs:
+  scan:
+    name: SonarQube scan
+    runs-on: windows-latest
+    steps:
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: 'zulu' # Alternative distribution options are available.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+      - name: Cache SonarQube Cloud packages
+        uses: actions/cache@v4
+        with:
+          path: ~\sonar\cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+      - name: Cache SonarQube Cloud scanner
+        id: cache-sonar-scanner
+        uses: actions/cache@v4
+        with:
+          path: .\.sonar\scanner
+          key: ${{ runner.os }}-sonar-scanner
+          restore-keys: ${{ runner.os }}-sonar-scanner
+      - name: Install SonarQube Cloud scanner
+        if: steps.cache-sonar-scanner.outputs.cache-hit != 'true'
+        shell: powershell
+        run: |
+          New-Item -Path .\.sonar\scanner -ItemType Directory
+          dotnet tool update dotnet-sonarscanner --tool-path .\.sonar\scanner
+      - name: Build and analyze
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        shell: powershell
+        run: |
+          .\.sonar\scanner\dotnet-sonarscanner begin /k:"LamersBart_Pridr-EventService" /o:"lamersdev" /d:sonar.token="${{ secrets.SONAR_TOKEN }}" /d:sonar.host.url="https://sonarcloud.io"
+          dotnet build
+          .\.sonar\scanner\dotnet-sonarscanner end /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
+ 
+  qualitiy:
+    name: Qualitiy gate check
+    needs: scan 
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Quality Gate Check
+        run: |
+          RESPONSE=$(curl -s -u ${{ secrets.SONAR_TOKEN }}: \
+          "https://sonarcloud.io/api/qualitygates/project_status?projectKey=LamersBart_Pridr-EventService")
+          echo "SonarCloud API Response: $RESPONSE"
+          STATUS=$(echo $RESPONSE | jq -r .projectStatus.status)
+          echo "Quality Gate Status: $STATUS"
+          if [ "$STATUS" != "OK" ]; then
+              echo "Quality Gate failed!"
+              exit 1
+          fi
+
+  build:
+    name: Build and push docker image
+    needs: [scan, qualitiy]
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set dynamic TAG variable
+      id: set_tag
+      run: echo "TAG=$(date +%s)" >> $GITHUB_ENV
+      
+    - name: Log in to Docker Hub
+      run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+    - name: Create appsettings.Production.json
+      run: |
+        mkdir -p ./EventService
+        printf '{
+          "ConnectionStrings": {
+            "PostgresConnection": "Host=${{ secrets.APPSETTINGS_PRODUCTION_CONNECTIONSTRING_HOST }};Port=${{ secrets.APPSETTINGS_PRODUCTION_CONNECTIONSTRING_PORT }};Username=${{ secrets.APPSETTINGS_PRODUCTION_CONNECTIONSTRING_USERNAME }};Password=${{ secrets.APPSETTINGS_PRODUCTION_CONNECTIONSTRING_PASSWORD }};Database=${{ secrets.APPSETTINGS_PRODUCTION_CONNECTIONSTRING_DB }}"
+          },
+          "RabbitMQHost": "'"${{ secrets.APPSETTINGS_PRODUCTION_RABBITMQHOST }}"'",
+          "RabbitMQPort": "'"${{ secrets.APPSETTINGS_PRODUCTION_RABBITMQPORT }}"'",
+          "Keycloak": {
+            "AuthorizationUrl": "'"${{ secrets.APPSETTINGS_PRODUCTION_KEYCLAOK_AUTHURL }}"'"
+          },
+          "Authentication": {
+            "MetadataAddress": "'"${{ secrets.APPSETTINGS_PRODUCTION_AUTH_METADATA }}"'",
+            "ValidIssuer": "'"${{ secrets.APPSETTINGS_PRODUCTION_AUTH_VALIDISSUER }}"'",
+            "Audience": "'"${{ secrets.APPSETTINGS_PRODUCTION_AUTH_AUDIENCE }}"'"
+          }
+        }' > ./EventService/appsettings.Production.json
+
+    - name: Verify appsettings.production.json
+      run: cat ./EventService/appsettings.Production.json
+    
+    - name: Build the Docker image
+      run: docker build ./EventService --file ./EventService/Dockerfile -t lamersbart/pridr-eventservice:$TAG
+      
+    - name: push image to hub
+      run: docker push lamersbart/pridr-eventservice:$TAG
