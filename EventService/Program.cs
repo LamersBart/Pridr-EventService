@@ -109,13 +109,15 @@ builder.Services.AddControllers();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-// if (app.Environment.IsDevelopment())
-// {
+if (app.Environment.IsDevelopment())
+{
 app.UseSwagger();
 app.UseSwaggerUI(o => o.EnableTryItOutByDefault());
-// }
-prepDb.PrepPopulation(app, environment.IsProduction());
-// app.UseHttpsRedirection();
+}
+app.UseSwagger();
+app.UseSwaggerUI(o => o.EnableTryItOutByDefault());
+PrepDb.PrepPopulation(app, environment.IsProduction());
+app.UseHttpsRedirection();
 app.UseCors(corsConfig);
 app.UseAuthentication();
 app.UseAuthorization();

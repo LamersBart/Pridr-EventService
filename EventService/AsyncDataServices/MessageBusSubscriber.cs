@@ -54,7 +54,7 @@ public class MessageBusSubscriber : BackgroundService
         return Task.CompletedTask;
     }
 
-    private void RabbitMQ_ConectionShutdown(object sender, ShutdownEventArgs e)
+    private static void RabbitMQ_ConectionShutdown(object sender, ShutdownEventArgs e)
     {
         Console.WriteLine("--> Connection Shutdown.");
     }

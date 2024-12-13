@@ -22,9 +22,9 @@ public class UserEventRepo : IUserEventRepo
         return _context.UserEvents.ToList();
     }
 
-    public UserEvent GetUserEventById(int id)
+    public UserEvent GetUserEventById(int userEventId)
     {
-        return _context.UserEvents.FirstOrDefault(p => p.Id == id)!;
+        return _context.UserEvents.FirstOrDefault(p => p.Id == userEventId)!;
     }
 
     public void CreateUserEvent(UserEvent userEvent)

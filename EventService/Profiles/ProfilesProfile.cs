@@ -1,6 +1,3 @@
-// using EventService.DTOs;
-// using EventService.Models;
-
 using EventService.DTOs;
 using EventService.Models;
 using Profile = AutoMapper.Profile;

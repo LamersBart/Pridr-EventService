@@ -3,7 +3,7 @@ using EventService.Models;
 
 namespace EventService.Data;
 
-public class prepDb
+public static class PrepDb
 {
     public static void PrepPopulation(IApplicationBuilder app, bool isProduction)
     {
