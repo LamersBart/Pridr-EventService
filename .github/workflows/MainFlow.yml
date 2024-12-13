@@ -1,6 +1,10 @@
 name: Main Flow
 on:
-  [workflow_dispatch]
+  push:
+    branches:
+      - main
+    pull_request:
+      types: [opened, synchronize, reopened]
 jobs:
   scan:
     name: SonarQube scan
