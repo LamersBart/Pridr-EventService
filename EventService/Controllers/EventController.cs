@@ -12,7 +12,7 @@ namespace EventService.Controllers;
 
 [Authorize]
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/v1/event")]
 public class EventController : ControllerBase
 {
     private readonly IUserEventRepo _repo;
@@ -24,7 +24,7 @@ public class EventController : ControllerBase
         _mapper = mapper;
     }
 
-    [HttpGet("getAll/")]
+    [HttpGet()]
     public ActionResult<IEnumerable<UserEventReadDto>> GetEvents() 
     {
         Console.WriteLine("--> Getting all Events...");
@@ -32,7 +32,7 @@ public class EventController : ControllerBase
         return Ok(_mapper.Map<IEnumerable<UserEventReadDto>>(events));
     }
     
-    [HttpGet("get/{eventId}")]
+    [HttpGet("{eventId}")]
     public ActionResult<UserEventReadDto> GetEventById(int eventId) 
     {
         if (!_repo.UserEventExist(eventId))
@@ -44,7 +44,7 @@ public class EventController : ControllerBase
         return Ok(_mapper.Map<UserEventReadDto>(userEvent));
     }
     
-    [HttpPost("create")]
+    [HttpPost()]
     public async Task<ActionResult<UserEventReadDto>> CreateEvent(UserEventCreateDto userEventCreateDto)
     {
         string? accessToken = await HttpContext.GetTokenAsync("access_token");
@@ -59,7 +59,7 @@ public class EventController : ControllerBase
         return Ok(_mapper.Map<UserEventReadDto>(newUserEvent));
     }
     
-    [HttpPatch("update/{eventId}")]
+    [HttpPatch("{eventId}")]
     public ActionResult<UserEventReadDto> UpdateEvent(int eventId, UserEventUpdateDto userEventUpdateDto)
     {
         if (!_repo.UserEventExist(eventId))
@@ -85,12 +85,9 @@ public class EventController : ControllerBase
         UserEvent userEvent = _repo.GetUserEventById(eventId);
         if (userEventAddProfileDto.ProfileIds != null)
         {
-            foreach (int profileId in userEventAddProfileDto.ProfileIds)
+            foreach (int profileId in userEventAddProfileDto.ProfileIds.Where(x => !userEvent.ProfileIds!.Contains(x)))
             {
-                if (!userEvent.ProfileIds!.Contains(profileId))
-                {
-                    userEvent.ProfileIds!.Add(profileId);
-                }
+                userEvent.ProfileIds!.Add(profileId);
             }
         }
         _repo.UpdateUserEvent(userEvent);
@@ -109,12 +106,9 @@ public class EventController : ControllerBase
         UserEvent userEvent = _repo.GetUserEventById(eventId);
         if (userEventAddProfileDto.ProfileIds != null)
         {
-            foreach (int profileId in userEventAddProfileDto.ProfileIds)
+            foreach (int profileId in userEventAddProfileDto.ProfileIds.Where(x => userEvent.ProfileIds!.Contains(x)))
             {
-                if (userEvent.ProfileIds!.Contains(profileId))
-                {
-                    userEvent.ProfileIds.Remove(profileId);
-                }
+                userEvent.ProfileIds!.Remove(profileId);
             }
         }
         _repo.UpdateUserEvent(userEvent);
@@ -122,8 +116,9 @@ public class EventController : ControllerBase
         return Ok(_mapper.Map<UserEventReadDto>(userEvent));
     }
     
-    [HttpDelete("delete/{eventId}")]
-    public ActionResult DeleteEvent(int eventId)
+    [HttpDelete("{eventId}")]
+    [ProducesResponseType<int>(StatusCodes.Status200OK)]
+    public IActionResult DeleteEvent(int eventId)
     {
         if (!_repo.UserEventExist(eventId))
         {
@@ -135,7 +130,7 @@ public class EventController : ControllerBase
         return Ok("Event Deleted");
     }
 
-    private Dictionary<string, object> DecodeJwt(string bearerToken)
+    private static Dictionary<string, object> DecodeJwt(string bearerToken)
     {
         try
         {
@@ -152,7 +147,7 @@ public class EventController : ControllerBase
             throw new ArgumentException("Invalid token", ex);
         }
     }
-    private string FetchKeycloakUserId(string bearerToken)
+    private static string FetchKeycloakUserId(string bearerToken)
     {
         Dictionary<string, object> dictionary = DecodeJwt(bearerToken);
         if (dictionary.TryGetValue("sub", out object? subValue))
