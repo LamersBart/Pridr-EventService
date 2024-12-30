@@ -36,14 +36,14 @@ public static class PrepDb
                 {
                     Name = "Test-Event-1",
                     Date = DateTime.UtcNow,
-                    ProfileIds = [1, 2, 3],
+                    ProfileIds = ["1", "2", "3"],
                     CreatedBy = "KeycloakUserId-1",
                 },
                 new UserEvent
                 {
                     Name = "Test-Event-2",
                     Date = DateTime.UtcNow,
-                    ProfileIds = [4, 2, 6],
+                    ProfileIds = ["4", "2", "6"],
                     CreatedBy = "KeycloakUserId-2",
                 });
             context.SaveChanges();
