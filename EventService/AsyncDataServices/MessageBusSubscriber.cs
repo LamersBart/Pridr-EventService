@@ -27,15 +27,25 @@ public class MessageBusSubscriber : BackgroundService
         {
             HostName = _configuration["RabbitMQHost"],
             Port = int.Parse(_configuration["RabbitMQPort"]!),
-            ClientProvidedName = "UserEventService",
+            ClientProvidedName = "EventService",
         };
         _connection = factory.CreateConnection();
         _channel = _connection.CreateModel();
         _queueName = _channel.QueueDeclare().QueueName;
-        _channel.QueueBind(
-            queue: _queueName,
-            exchange: "amq.topic",
-            routingKey: "KK.EVENT.CLIENT.pridr.SUCCESS.#.LOGIN");
+        var routingKeys = new[]
+        {
+            "KK.EVENT.CLIENT.pridr.SUCCESS.#.REGISTER",
+            "KK.EVENT.CLIENT.pridr.SUCCESS.#.LOGIN",
+            "KK.EVENT.CLIENT.pridr.SUCCESS.#.LOGOUT",
+            "KK.EVENT.CLIENT.pridr.SUCCESS.#.DELETE_ACCOUNT"
+        };
+        foreach (var routingKey in routingKeys)
+        {
+            _channel.QueueBind(
+                queue: _queueName,
+                exchange: "amq.topic",
+                routingKey: routingKey);
+        }
         Console.WriteLine("--> Listening on the Message Bus. Waiting for messages...");
         _connection.ConnectionShutdown += RabbitMQ_ConectionShutdown!;
     }

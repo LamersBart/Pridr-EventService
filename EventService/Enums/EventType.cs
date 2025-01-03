@@ -5,5 +5,6 @@ public enum EventType
     Login,
     Logout,
     Register,
+    Delete,
     Undetermined
 }
