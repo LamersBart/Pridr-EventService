@@ -6,7 +6,7 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
 # Copy only the project files first to leverage caching
-COPY UserService.csproj ./
+COPY EventService.csproj ./
 RUN dotnet restore
 
 # Copy the source files explicitly
