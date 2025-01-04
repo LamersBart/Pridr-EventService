@@ -16,7 +16,7 @@ public class UserEvent
     public required DateTime Date { get; set; }
     
     [Required]
-    public List<int>? ProfileIds { get; set; }
+    public List<string>? ProfileIds { get; set; }
     
     [Required]
     [MaxLength(100)]

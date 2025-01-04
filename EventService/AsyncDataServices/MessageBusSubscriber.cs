@@ -8,15 +8,13 @@ namespace EventService.AsyncDataServices;
 
 public class MessageBusSubscriber : BackgroundService
 {
-    private readonly IConfiguration _configuration;
     private readonly IEventProcessor _eventProcessor;
     private IConnection? _connection;
     private IModel? _channel;
     private string? _queueName;
 
-    public MessageBusSubscriber(IConfiguration configuration, IEventProcessor eventProcessor)
+    public MessageBusSubscriber(IEventProcessor eventProcessor)
     {
-        _configuration = configuration;
         _eventProcessor = eventProcessor;
         InitiliazeRabbitMQ();
     }
@@ -25,17 +23,27 @@ public class MessageBusSubscriber : BackgroundService
     {
         var factory = new ConnectionFactory()
         {
-            HostName = _configuration["RabbitMQHost"],
-            Port = int.Parse(_configuration["RabbitMQPort"]!),
-            ClientProvidedName = "UserEventService",
+            HostName = Environment.GetEnvironmentVariable("MQHOST"),
+            Port = int.Parse(Environment.GetEnvironmentVariable("MQPORT")!),
+            ClientProvidedName = "EventService",
         };
         _connection = factory.CreateConnection();
         _channel = _connection.CreateModel();
         _queueName = _channel.QueueDeclare().QueueName;
-        _channel.QueueBind(
-            queue: _queueName,
-            exchange: "amq.topic",
-            routingKey: "KK.EVENT.CLIENT.pridr.SUCCESS.#.LOGIN");
+        var routingKeys = new[]
+        {
+            "KK.EVENT.CLIENT.pridr.SUCCESS.#.REGISTER",
+            "KK.EVENT.CLIENT.pridr.SUCCESS.#.LOGIN",
+            "KK.EVENT.CLIENT.pridr.SUCCESS.#.LOGOUT",
+            "KK.EVENT.CLIENT.pridr.SUCCESS.#.DELETE_ACCOUNT"
+        };
+        foreach (var routingKey in routingKeys)
+        {
+            _channel.QueueBind(
+                queue: _queueName,
+                exchange: "amq.topic",
+                routingKey: routingKey);
+        }
         Console.WriteLine("--> Listening on the Message Bus. Waiting for messages...");
         _connection.ConnectionShutdown += RabbitMQ_ConectionShutdown!;
     }

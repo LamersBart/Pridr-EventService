@@ -11,4 +11,6 @@ public interface IUserEventRepo
     bool UserEventExist(int userEventId);
     void UpdateUserEvent(UserEvent userEvent);
     void DeleteUserEvent(int userEventId);
+    bool UserEventExistByUserId(string keycloakUserId);
+    IEnumerable<UserEvent> getAllUserEventsByUserId(string keycloakUserId);
 }

@@ -6,7 +6,6 @@ using EventService.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Primitives;
 
 namespace EventService.Controllers;
 
@@ -48,6 +47,8 @@ public class EventController : ControllerBase
     public async Task<ActionResult<UserEventReadDto>> CreateEvent(UserEventCreateDto userEventCreateDto)
     {
         string? accessToken = await HttpContext.GetTokenAsync("access_token");
+        // Converteer de datum naar UTC
+        userEventCreateDto.Date = DateTime.SpecifyKind(userEventCreateDto.Date, DateTimeKind.Utc);
         Console.WriteLine($"--> Adding New Event...");
         UserEvent newUserEvent = _mapper.Map<UserEvent>(userEventCreateDto);
         if (accessToken != null)
@@ -85,7 +86,7 @@ public class EventController : ControllerBase
         UserEvent userEvent = _repo.GetUserEventById(eventId);
         if (userEventAddProfileDto.ProfileIds != null)
         {
-            foreach (int profileId in userEventAddProfileDto.ProfileIds.Where(x => !userEvent.ProfileIds!.Contains(x)))
+            foreach (string profileId in userEventAddProfileDto.ProfileIds.Where(x => !userEvent.ProfileIds!.Contains(x)))
             {
                 userEvent.ProfileIds!.Add(profileId);
             }
@@ -106,7 +107,7 @@ public class EventController : ControllerBase
         UserEvent userEvent = _repo.GetUserEventById(eventId);
         if (userEventAddProfileDto.ProfileIds != null)
         {
-            foreach (int profileId in userEventAddProfileDto.ProfileIds.Where(x => userEvent.ProfileIds!.Contains(x)))
+            foreach (string profileId in userEventAddProfileDto.ProfileIds.Where(x => userEvent.ProfileIds!.Contains(x)))
             {
                 userEvent.ProfileIds!.Remove(profileId);
             }
@@ -134,12 +135,42 @@ public class EventController : ControllerBase
     {
         try
         {
+            // Strip "Bearer " als prefix
             var token = bearerToken.StartsWith("Bearer ") ? bearerToken.Substring(7) : bearerToken;
+
+            // Lees het token
             var tokenHandler = new JwtSecurityTokenHandler();
             var jwtToken = tokenHandler.ReadJwtToken(token);
-            var claims = jwtToken.Claims.ToDictionary(c => c.Type, c => (object)c.Value);
+
+            // Claims verwerken
+            var claims = new Dictionary<string, object>();
+
+            foreach (var claim in jwtToken.Claims)
+            {
+                // Controleer of de sleutel al bestaat
+                if (claims.ContainsKey(claim.Type))
+                {
+                    // Voeg meerdere waarden toe als lijst
+                    if (claims[claim.Type] is List<object> list)
+                    {
+                        list.Add(claim.Value); // Voeg toe aan bestaande lijst
+                    }
+                    else
+                    {
+                        claims[claim.Type] = new List<object> { claims[claim.Type], claim.Value };
+                    }
+                }
+                else
+                {
+                    // Voeg nieuwe sleutel/waarde toe
+                    claims[claim.Type] = claim.Value;
+                }
+            }
+
+            // Voeg standaardwaarden toe
             claims["iss"] = jwtToken.Issuer;
-            claims["aud"] = string.Join(", ", jwtToken.Audiences);
+            claims["aud"] = jwtToken.Audiences.ToList(); // Audiences expliciet als lijst
+
             return claims;
         }
         catch (Exception ex)

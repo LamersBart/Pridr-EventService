@@ -55,4 +55,14 @@ public class UserEventRepo : IUserEventRepo
         UserEvent userEvent = GetUserEventById(userEventId);
         _context.UserEvents.Remove(userEvent);
     }
+
+    public bool UserEventExistByUserId(string keycloakUserId)
+    {
+        return _context.UserEvents.Any(p => p.CreatedBy == keycloakUserId);
+    }
+
+    public IEnumerable<UserEvent> getAllUserEventsByUserId(string keycloakUserId)
+    {
+        return _context.UserEvents.Where(p => p.CreatedBy == keycloakUserId).ToList();
+    }
 }
