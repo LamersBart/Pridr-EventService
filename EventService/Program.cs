@@ -126,7 +126,7 @@ builder.Services.AddCors(opt =>
 {
     opt.AddPolicy("reactApp", p =>
     {
-        p.WithOrigins("http://localhost:5173")
+        p.WithOrigins("https://demo.pridr.app")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -142,9 +142,8 @@ if (app.Environment.IsDevelopment())
 }
 app.UseSwagger();
 app.UseSwaggerUI(o => o.EnableTryItOutByDefault());
-PrepDb.PrepPopulation(app, environment.IsProduction());
+await PrepDb.PrepPopulation(app, environment.IsProduction());
 app.UseHttpsRedirection();
-// app.UseCors(corsConfig);
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

@@ -5,7 +5,6 @@ namespace EventService.Models;
 public class UserEvent
 {
     [Key]
-    [Required]
     public int Id { get; set; }
 
     [Required]
