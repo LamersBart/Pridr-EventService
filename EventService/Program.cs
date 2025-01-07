@@ -33,16 +33,6 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
-// var  corsConfig = "_corsConfig";
-// builder.Services.AddCors(o =>
-// {
-//     o.AddPolicy("_corsConfig", policy =>
-//     {
-//         policy.WithOrigins("http://localhost:5039", "https://localhost:7009")
-//             .AllowAnyMethod()
-//             .AllowAnyHeader();
-//     });
-// });
 var contact = new OpenApiContact
 {
     Name = "Bart Lamers",
@@ -126,7 +116,7 @@ builder.Services.AddCors(opt =>
 {
     opt.AddPolicy("reactApp", p =>
     {
-        p.WithOrigins("http://localhost:5173")
+        p.WithOrigins("https://demo.pridr.app")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -134,17 +124,13 @@ builder.Services.AddCors(opt =>
 });
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI(o => o.EnableTryItOutByDefault());
 }
-app.UseSwagger();
-app.UseSwaggerUI(o => o.EnableTryItOutByDefault());
-PrepDb.PrepPopulation(app, environment.IsProduction());
+await PrepDb.PrepPopulation(app, environment.IsProduction());
 app.UseHttpsRedirection();
-// app.UseCors(corsConfig);
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
