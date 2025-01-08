@@ -121,18 +121,26 @@ builder.Services.AddCors(opt =>
             .AllowAnyMethod()
             .AllowCredentials();
     });
+    opt.AddPolicy("local", p =>
+    {
+        p.WithOrigins("http://localhost:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
 });
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
+if (app.Environment.IsDevelopment()) {
     app.UseSwagger();
     app.UseSwaggerUI(o => o.EnableTryItOutByDefault());
+    app.UseCors("local");
+} else {
+    app.UseHttpsRedirection();
+    app.UseCors("reactApp");
 }
 await PrepDb.PrepPopulation(app, environment.IsProduction());
-app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-app.UseCors("reactApp");
 app.Run();
