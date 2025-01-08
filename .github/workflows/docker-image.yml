@@ -12,15 +12,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set dynamic TAG variable
-        id: set_tag
-        run: echo "TAG=$(date +%s)" >> $GITHUB_ENV
-
       - name: Log in to Docker Hub
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
       - name: Build the Docker image
-        run: docker build ./EventService --file ./EventService/Dockerfile -t lamersbart/pridr-eventservice:$TAG
+        run: docker build ./EventService --file ./EventService/Dockerfile -t lamersbart/pridr-eventservice:latest
 
       - name: push image to hub
-        run: docker push lamersbart/pridr-eventservice:$TAG
+        run: docker push lamersbart/pridr-eventservice:latest
