@@ -130,7 +130,25 @@ public class EventController : ControllerBase
         _repo.SaveChanges();
         return Ok("Event Deleted");
     }
-
+    
+    [AllowAnonymous]
+    [HttpPost("test")]
+    public ActionResult<UserEventReadDto> CreateEventTest(UserEventCreateDto userEventCreateDto)
+    {
+        var disableAuth = Environment.GetEnvironmentVariable("DISABLE_AUTH") == "true";
+        if (!disableAuth)
+        {
+            return NotFound("This endpoint is available only when testmode is enabled.");
+        }
+        userEventCreateDto.Date = DateTime.SpecifyKind(userEventCreateDto.Date, DateTimeKind.Utc);
+        Console.WriteLine($"--> Adding New Event...");
+        UserEvent newUserEvent = _mapper.Map<UserEvent>(userEventCreateDto);
+        newUserEvent.CreatedBy = "a6427685-84e3-4fbf-8716-c94d1053b020";
+        _repo.CreateUserEvent(newUserEvent);
+        _repo.SaveChanges();
+        return Ok(_mapper.Map<UserEventReadDto>(newUserEvent));
+    }
+    
     private static Dictionary<string, object> DecodeJwt(string bearerToken)
     {
         try
