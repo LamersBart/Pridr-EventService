@@ -25,6 +25,8 @@ public class MessageBusSubscriber : BackgroundService
         {
             HostName = Environment.GetEnvironmentVariable("MQHOST"),
             Port = int.Parse(Environment.GetEnvironmentVariable("MQPORT")!),
+            UserName = Environment.GetEnvironmentVariable("MQUSER"),
+            Password = Environment.GetEnvironmentVariable("MQPASS"),
             ClientProvidedName = "EventService",
         };
         _connection = factory.CreateConnection();
